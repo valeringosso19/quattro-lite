@@ -63,6 +63,7 @@ async function doLogin() {
 }
 
 async function doLogout() {
+  if (realtimeChannel) { sb.removeChannel(realtimeChannel); realtimeChannel = null; }
   await sb.auth.signOut();
   document.getElementById('app-shell').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
@@ -81,6 +82,33 @@ async function enterApp() {
   await loadAllData();
   wireNav();
   renderAll();
+  subscribeRealtime();
+}
+
+// ---------------------------------------------------------
+// REALTIME — başka kullanıcının kaydı anlık görünsün
+// ---------------------------------------------------------
+let realtimeChannel = null;
+let realtimeDebounceTimer = null;
+
+function subscribeRealtime() {
+  if (realtimeChannel) return; // zaten aboneyiz
+
+  const handleChange = () => {
+    clearTimeout(realtimeDebounceTimer);
+    realtimeDebounceTimer = setTimeout(async () => {
+      await loadAllData();
+      renderAll();
+      showToast('Panel güncellendi — bir ekip arkadaşı kayıt ekledi/güncelledi.');
+    }, 400); // arka arkaya gelen değişiklikleri tek seferde toparla
+  };
+
+  realtimeChannel = sb.channel('quattro-live-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, handleChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'policies' }, handleChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'cari_transactions' }, handleChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'installments' }, handleChange)
+    .subscribe();
 }
 
 // ---------------------------------------------------------
