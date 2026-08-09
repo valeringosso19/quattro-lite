@@ -33,6 +33,12 @@
 
 <!-- ============ APP SHELL ============ -->
 <div id="app-shell" style="display:none;">
+  <div id="mobileTopBar">
+    <button class="hamburger-btn" onclick="toggleSidebar()">☰</button>
+    <span class="mb-brand-q display">Q</span>
+    <span class="mb-brand-name display">QUATTRO</span>
+  </div>
+  <div id="sidebarOverlay" onclick="toggleSidebar()"></div>
   <div id="sidebar">
     <div class="brand">
       <div style="display:flex; align-items:center; gap:8px;">

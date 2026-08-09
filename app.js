@@ -84,6 +84,14 @@ async function enterApp() {
 }
 
 // ---------------------------------------------------------
+// MOBİL SIDEBAR
+// ---------------------------------------------------------
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+
+// ---------------------------------------------------------
 // NAV
 // ---------------------------------------------------------
 function wireNav() {
@@ -93,6 +101,9 @@ function wireNav() {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById(btn.dataset.page).classList.add('active');
+      // mobilde menüye tıklayınca sidebar'ı kapat
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebarOverlay').classList.remove('open');
     };
   });
 }
@@ -163,21 +174,21 @@ function renderDashboard() {
   const rBody = document.getElementById('dashRenewalsBody');
   rBody.innerHTML = upcoming.length ? upcoming.slice(0,8).map(p => `
     <tr>
-      <td>${customerName(p.customer_id)}</td>
-      <td>${p.branch || '—'}</td>
-      <td class="mono">${p.policy_no || '—'}</td>
-      <td>${fmtDate(p.end_date)}</td>
-      <td><span class="pill">${p.remaining} gün</span></td>
+      <td data-label="Müşteri">${customerName(p.customer_id)}</td>
+      <td data-label="Branş">${p.branch || '—'}</td>
+      <td data-label="Poliçe No" class="mono">${p.policy_no || '—'}</td>
+      <td data-label="Bitiş">${fmtDate(p.end_date)}</td>
+      <td data-label="Kalan Gün"><span class="pill">${p.remaining} gün</span></td>
     </tr>`).join('') : `<tr><td class="table-empty" colspan="5">Önümüzdeki 30 gün içinde yenileme yok.</td></tr>`;
 
   const oBody = document.getElementById('dashOverdueBody');
   oBody.innerHTML = overdue.length ? overdue.slice(0,8).map(i => `
     <tr>
-      <td>${customerName(i.customer_id)}</td>
-      <td class="mono">${policyNoOf(i.policy_id)}</td>
-      <td>${fmtDate(i.due_date)}</td>
-      <td>${fmtMoney(i.amount)}</td>
-      <td class="right"><button class="btn btn-wa btn-sm" onclick="sendWaInstallment('${i.id}')">WhatsApp</button></td>
+      <td data-label="Müşteri">${customerName(i.customer_id)}</td>
+      <td data-label="Poliçe No" class="mono">${policyNoOf(i.policy_id)}</td>
+      <td data-label="Vade">${fmtDate(i.due_date)}</td>
+      <td data-label="Tutar">${fmtMoney(i.amount)}</td>
+      <td data-label="" class="right"><button class="btn btn-wa btn-sm" onclick="sendWaInstallment('${i.id}')">WhatsApp</button></td>
     </tr>`).join('') : `<tr><td class="table-empty" colspan="5">Vadesi geçmiş taksit yok. 🎉</td></tr>`;
 }
 
@@ -198,13 +209,13 @@ function renderCustomers() {
   const body = document.getElementById('customersBody');
   body.innerHTML = list.length ? list.map(c => `
     <tr>
-      <td>${c.full_name}</td>
-      <td class="mono">${c.tc_vkn || '—'}</td>
-      <td class="mono">${c.phone || '—'}</td>
-      <td>${c.city || '—'}</td>
-      <td>${c.customer_type === 'kurumsal' ? 'Kurumsal' : 'Bireysel'}</td>
-      <td class="right"><button class="btn btn-ghost btn-sm" onclick="openCustomerModal('${c.id}')">Düzenle</button></td>
-    </tr>`).join('') : `<tr><td class="table-empty" colspan="6">Kayıt yok. "+ Yeni Müşteri" ile başla.</td></tr>`;
+      <td data-label="Ad Soyad">${c.full_name}</td>
+      <td data-label="TC/VKN" class="mono">${c.tc_vkn || '—'}</td>
+      <td data-label="Telefon" class="mono">${c.phone || '—'}</td>
+      <td data-label="Şehir">${c.city || '—'}</td>
+      <td data-label="Tip">${c.customer_type === 'kurumsal' ? 'Kurumsal' : 'Bireysel'}</td>
+      <td data-label="" class="right"><button class="btn btn-ghost btn-sm" onclick="openCustomerModal('${c.id}')">Düzenle</button></td>
+    </tr>`).join('') : `<tr><td class="table-empty" colspan="6">Kayıt yok. Yeni müşteri "Poliçeler" sayfasından eklenir.</td></tr>`;
 }
 
 function openCustomerModal(id) {
@@ -291,14 +302,14 @@ function renderPolicies() {
   const body = document.getElementById('policiesBody');
   body.innerHTML = list.length ? list.map(p => `
     <tr>
-      <td>${customerName(p.customer_id)}</td>
-      <td>${p.company_name || '—'}</td>
-      <td>${p.branch || '—'}</td>
-      <td class="mono">${p.policy_no || '—'}</td>
-      <td>${fmtDate(p.end_date)}</td>
-      <td>${fmtMoney(p.gross_premium)}</td>
-      <td><span class="status-tag status-${p.status}">${statusLabel(p.status)}</span></td>
-      <td class="right"><button class="btn btn-ghost btn-sm" onclick="openPolicyModal('${p.id}')">Düzenle</button></td>
+      <td data-label="Müşteri">${customerName(p.customer_id)}</td>
+      <td data-label="Şirket">${p.company_name || '—'}</td>
+      <td data-label="Branş">${p.branch || '—'}</td>
+      <td data-label="Poliçe No" class="mono">${p.policy_no || '—'}</td>
+      <td data-label="Bitiş">${fmtDate(p.end_date)}</td>
+      <td data-label="Brüt Prim">${fmtMoney(p.gross_premium)}</td>
+      <td data-label="Durum"><span class="status-tag status-${p.status}">${statusLabel(p.status)}</span></td>
+      <td data-label="" class="right"><button class="btn btn-ghost btn-sm" onclick="openPolicyModal('${p.id}')">Düzenle</button></td>
     </tr>`).join('') : `<tr><td class="table-empty" colspan="8">Kayıt yok.</td></tr>`;
 }
 
@@ -408,10 +419,10 @@ function renderCari() {
   balBody.innerHTML = rows.length ? rows.map(([cid, b]) => {
     const net = b.borc - b.alacak;
     return `<tr>
-      <td>${customerName(cid)}</td>
-      <td>${fmtMoney(b.borc)}</td>
-      <td>${fmtMoney(b.alacak)}</td>
-      <td class="${net > 0 ? 'mono' : 'mono'}" style="color:${net > 0 ? 'var(--bad)' : 'var(--good)'}">${fmtMoney(net)}</td>
+      <td data-label="Müşteri">${customerName(cid)}</td>
+      <td data-label="Toplam Borç">${fmtMoney(b.borc)}</td>
+      <td data-label="Toplam Alacak">${fmtMoney(b.alacak)}</td>
+      <td data-label="Net Bakiye" class="mono" style="color:${net > 0 ? 'var(--bad)' : 'var(--good)'}">${fmtMoney(net)}</td>
     </tr>`;
   }).join('') : `<tr><td class="table-empty" colspan="4">Cari hareket yok.</td></tr>`;
 
@@ -419,12 +430,12 @@ function renderCari() {
   const body = document.getElementById('cariBody');
   body.innerHTML = DATA.cari.length ? DATA.cari.slice(0,50).map(t => `
     <tr>
-      <td>${fmtDate(t.transaction_date)}</td>
-      <td>${customerName(t.customer_id)}</td>
-      <td>${t.type === 'borc' ? '<span class="pill bad">Borç</span>' : '<span class="pill">Alacak</span>'}</td>
-      <td>${fmtMoney(t.amount)}</td>
-      <td class="muted">${t.description || '—'}</td>
-      <td class="right"><button class="btn btn-danger btn-sm" onclick="deleteCari('${t.id}')">Sil</button></td>
+      <td data-label="Tarih">${fmtDate(t.transaction_date)}</td>
+      <td data-label="Müşteri">${customerName(t.customer_id)}</td>
+      <td data-label="Tip">${t.type === 'borc' ? '<span class="pill bad">Borç</span>' : '<span class="pill">Alacak</span>'}</td>
+      <td data-label="Tutar">${fmtMoney(t.amount)}</td>
+      <td data-label="Açıklama" class="muted">${t.description || '—'}</td>
+      <td data-label="" class="right"><button class="btn btn-danger btn-sm" onclick="deleteCari('${t.id}')">Sil</button></td>
     </tr>`).join('') : `<tr><td class="table-empty" colspan="6">Hareket yok.</td></tr>`;
 }
 
@@ -482,13 +493,13 @@ function renderInstallments() {
       : overdue ? '<span class="status-tag status-iptal">Gecikmiş</span>'
       : '<span class="status-tag status-sure-gecti">Bekliyor</span>';
     return `<tr>
-      <td>${customerName(i.customer_id)}</td>
-      <td class="mono">${policyNoOf(i.policy_id)}</td>
-      <td>${i.installment_no || 1}</td>
-      <td>${fmtDate(i.due_date)}</td>
-      <td>${fmtMoney(i.amount)}</td>
-      <td>${st}</td>
-      <td class="right">
+      <td data-label="Müşteri">${customerName(i.customer_id)}</td>
+      <td data-label="Poliçe No" class="mono">${policyNoOf(i.policy_id)}</td>
+      <td data-label="Taksit">${i.installment_no || 1}</td>
+      <td data-label="Vade">${fmtDate(i.due_date)}</td>
+      <td data-label="Tutar">${fmtMoney(i.amount)}</td>
+      <td data-label="Durum">${st}</td>
+      <td data-label="" class="right">
         ${i.paid ? '' : `<button class="btn btn-good btn-sm" onclick="markPaid('${i.id}')">Ödendi İşaretle</button>`}
       </td>
     </tr>`;
