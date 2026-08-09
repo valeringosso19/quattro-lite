@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quattro Sigorta ve Aracılık Hizmetleri — Poliçe & Cari Takip</title>
+<link rel="stylesheet" href="app.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-title">
+      <span class="login-q display">Q</span>
+      <div class="login-company-line1 display">QUATTRO</div>
+      <div class="login-company-line2">Sigorta ve Aracılık Hizmetleri</div>
+    </div>
+    <div class="form-field" style="margin-bottom:12px;">
+      <label>E-posta</label>
+      <input type="email" id="loginEmail" placeholder="ornek@quattrosigorta.com">
+    </div>
+    <div class="form-field" style="margin-bottom:18px;">
+      <label>Şifre</label>
+      <input type="password" id="loginPassword" placeholder="••••••••">
+    </div>
+    <button class="btn-login-primary" onclick="doLogin()">Giriş Yap</button>
+    <div class="hint" id="loginError"></div>
+    <div class="hint" style="margin-top:14px;">Kullanıcı hesabı Supabase Authentication panelinden eklenir.</div>
+  </div>
+</div>
+
+<!-- ============ APP SHELL ============ -->
+<div id="app-shell" style="display:none;">
+  <div id="sidebar">
+    <div class="brand">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="brand-q display">Q</span>
+        <span class="brand-name display">QUATTRO</span>
+      </div>
+      <div class="brand-sub">Sigorta ve Aracılık Hizmetleri</div>
+    </div>
+
+    <button class="nav-btn active" data-page="dashboardPage">📊 Genel Bakış</button>
+    <button class="nav-btn" data-page="customersPage">👤 Müşteriler</button>
+    <button class="nav-btn" data-page="policiesPage">📄 Poliçeler</button>
+    <button class="nav-btn" data-page="cariPage">💳 Cari Hesap</button>
+    <button class="nav-btn" data-page="installmentsPage">📅 Taksitler <span class="badge zero" id="badgeInstallments">0</span></button>
+    <button class="nav-btn" data-page="whatsappPage">🟢 WhatsApp Hatırlatma <span class="badge zero" id="badgeWa">0</span></button>
+
+    <div class="theme-picker">
+      <div class="theme-picker-label">Tema</div>
+      <div class="theme-swatches">
+        <button class="swatch swatch-dark" data-theme="dark" title="Lacivert" onclick="setTheme('dark')"></button>
+        <button class="swatch swatch-light" data-theme="light" title="Açık" onclick="setTheme('light')"></button>
+        <button class="swatch swatch-emerald" data-theme="emerald" title="Zümrüt" onclick="setTheme('emerald')"></button>
+        <button class="swatch swatch-purple" data-theme="purple" title="Mor" onclick="setTheme('purple')"></button>
+      </div>
+    </div>
+
+    <div style="padding-top:10px; border-top:1px solid var(--line);">
+      <button class="nav-btn" onclick="doLogout()">🚪 Çıkış</button>
+    </div>
+  </div>
+
+  <div id="main">
+
+    <!-- ============ DASHBOARD ============ -->
+    <div class="page active" id="dashboardPage">
+      <div class="page-header">
+        <div>
+          <div class="page-title display">Genel Bakış</div>
+          <div class="page-desc">Portföyünün anlık durumu</div>
+        </div>
+      </div>
+
+      <div class="quattro-grid">
+        <div class="kpi-cell">
+          <div class="kpi-label">Toplam Müşteri</div>
+          <div class="kpi-value display" id="kpiCustomers">0</div>
+        </div>
+        <div class="kpi-cell">
+          <div class="kpi-label">Aktif Poliçe</div>
+          <div class="kpi-value display good" id="kpiActivePolicies">0</div>
+        </div>
+        <div class="kpi-cell">
+          <div class="kpi-label">30 Gün İçinde Yenilenecek</div>
+          <div class="kpi-value display warn" id="kpiRenewals">0</div>
+        </div>
+        <div class="kpi-cell">
+          <div class="kpi-label">Vadesi Geçmiş Taksit</div>
+          <div class="kpi-value display bad" id="kpiOverdue">0</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Yaklaşan Yenilemeler (30 gün)</div>
+        <table>
+          <thead><tr><th>Müşteri</th><th>Branş</th><th>Poliçe No</th><th>Bitiş</th><th>Kalan Gün</th></tr></thead>
+          <tbody id="dashRenewalsBody"><tr><td class="table-empty" colspan="5">Yükleniyor…</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Vadesi Geçmiş Taksitler</div>
+        <table>
+          <thead><tr><th>Müşteri</th><th>Poliçe No</th><th>Vade</th><th>Tutar</th><th></th></tr></thead>
+          <tbody id="dashOverdueBody"><tr><td class="table-empty" colspan="5">Yükleniyor…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============ MÜŞTERİLER ============ -->
+    <div class="page" id="customersPage">
+      <div class="page-header">
+        <div>
+          <div class="page-title display">Müşteriler</div>
+          <div class="page-desc" id="customerCount">0 kayıt</div>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <input type="text" id="customerSearch" placeholder="İsim, TC/VKN veya telefon ara…" style="width:280px;" oninput="renderCustomers()">
+        </div>
+      </div>
+      <div class="hint" style="margin:-12px 0 14px 0;">Yeni müşteriler "Poliçeler" sayfasından, poliçe oluştururken otomatik eklenir.</div>
+      <div class="card" style="padding:0;">
+        <table>
+          <thead><tr><th>Ad Soyad</th><th>TC/VKN</th><th>Telefon</th><th>Şehir</th><th>Tip</th><th></th></tr></thead>
+          <tbody id="customersBody"><tr><td class="table-empty" colspan="6">Yükleniyor…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============ POLİÇELER ============ -->
+    <div class="page" id="policiesPage">
+      <div class="page-header">
+        <div>
+          <div class="page-title display">Poliçeler</div>
+          <div class="page-desc" id="policyCount">0 kayıt</div>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <select id="policyStatusFilter" onchange="renderPolicies()">
+            <option value="">Tüm Durumlar</option>
+            <option value="aktif">Aktif</option>
+            <option value="iptal">İptal</option>
+            <option value="yenilendi">Yenilendi</option>
+            <option value="sure-gecti">Süresi Geçti</option>
+          </select>
+          <button class="btn btn-accent" onclick="openPolicyModal()">+ Yeni Poliçe</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0;">
+        <table>
+          <thead><tr><th>Müşteri</th><th>Şirket</th><th>Branş</th><th>Poliçe No</th><th>Bitiş</th><th>Brüt Prim</th><th>Durum</th><th></th></tr></thead>
+          <tbody id="policiesBody"><tr><td class="table-empty" colspan="8">Yükleniyor…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============ CARİ HESAP ============ -->
+    <div class="page" id="cariPage">
+      <div class="page-header">
+        <div>
+          <div class="page-title display">Cari Hesap</div>
+          <div class="page-desc">Müşteri borç / alacak hareketleri</div>
+        </div>
+        <button class="btn btn-accent" onclick="openCariModal()">+ Yeni Hareket</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Müşteriye Göre Bakiye</div>
+        <table>
+          <thead><tr><th>Müşteri</th><th>Toplam Borç</th><th>Toplam Alacak</th><th>Net Bakiye</th></tr></thead>
+          <tbody id="cariBalanceBody"><tr><td class="table-empty" colspan="4">Yükleniyor…</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="card" style="padding:0;">
+        <div class="card-title" style="padding:20px 20px 0 20px;">Son Hareketler</div>
+        <table>
+          <thead><tr><th>Tarih</th><th>Müşteri</th><th>Tip</th><th>Tutar</th><th>Açıklama</th><th></th></tr></thead>
+          <tbody id="cariBody"><tr><td class="table-empty" colspan="6">Yükleniyor…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============ TAKSİTLER ============ -->
+    <div class="page" id="installmentsPage">
+      <div class="page-header">
+        <div>
+          <div class="page-title display">Taksitler</div>
+          <div class="page-desc">Ödeme planı ve tahsilat takibi</div>
+        </div>
+        <button class="btn btn-accent" onclick="openInstallmentModal()">+ Yeni Taksit</button>
+      </div>
+      <div class="card" style="padding:0;">
+        <table>
+          <thead><tr><th>Müşteri</th><th>Poliçe No</th><th>Taksit</th><th>Vade</th><th>Tutar</th><th>Durum</th><th></th></tr></thead>
+          <tbody id="installmentsBody"><tr><td class="table-empty" colspan="7">Yükleniyor…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============ WHATSAPP HATIRLATMA ============ -->
+    <div class="page" id="whatsappPage">
+      <div class="page-header">
+        <div>
+          <div class="page-title display">WhatsApp Hatırlatma</div>
+          <div class="page-desc">Yaklaşan yenilemeler ve gecikmiş taksitler için tek tık mesaj</div>
+        </div>
+        <div class="form-field" style="flex-direction:row; align-items:center; gap:8px;">
+          <label style="margin:0;">Yenileme eşiği:</label>
+          <select id="waThresholdDays" onchange="renderWhatsapp()">
+            <option value="15">15 gün</option>
+            <option value="30" selected>30 gün</option>
+            <option value="45">45 gün</option>
+            <option value="60">60 gün</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🔄 Yaklaşan Yenilemeler</div>
+        <div id="waRenewalsList"><div class="table-empty">Yükleniyor…</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">⏰ Gecikmiş Taksitler</div>
+        <div id="waOverdueList"><div class="table-empty">Yükleniyor…</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🎂 Yaklaşan Doğum Günleri (7 gün)</div>
+        <div id="waBirthdayList"><div class="table-empty">Yükleniyor…</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============ MODALS ============ -->
+
+<!-- Müşteri Modal -->
+<div class="modal-overlay" id="customerModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Yeni Müşteri</h3><button class="modal-close" onclick="closeModal('customerModal')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="customerId">
+      <div class="form-grid">
+        <div class="form-field full"><label>Ad Soyad / Unvan *</label><input id="cFullName"></div>
+        <div class="form-field"><label>TC / VKN</label><input id="cTcVkn"></div>
+        <div class="form-field"><label>Telefon *</label><input id="cPhone" placeholder="05XX XXX XX XX"></div>
+        <div class="form-field"><label>E-posta</label><input id="cEmail" type="email"></div>
+        <div class="form-field"><label>Şehir</label><input id="cCity"></div>
+        <div class="form-field"><label>Doğum Tarihi</label><input id="cBirthDate" type="date"></div>
+        <div class="form-field"><label>Tip</label>
+          <select id="cType"><option value="bireysel">Bireysel</option><option value="kurumsal">Kurumsal</option></select>
+        </div>
+        <div class="form-field full"><label>Not</label><textarea id="cNotes" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('customerModal')">Vazgeç</button>
+      <button class="btn btn-accent" onclick="saveCustomer()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Poliçe Modal -->
+<div class="modal-overlay" id="policyModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Yeni Poliçe</h3><button class="modal-close" onclick="closeModal('policyModal')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="policyId">
+      <div class="form-grid">
+        <div class="form-field full">
+          <label>Müşteri *</label>
+          <select id="pCustomer" onchange="togglePolicyCustomerMode()"></select>
+        </div>
+
+        <div class="form-field full new-customer-block" id="policyNewCustomerFields" style="display:none; background:var(--panel-2); border:1px dashed var(--line); border-radius:8px; padding:12px;">
+          <div class="hint" style="margin-bottom:10px; color:var(--accent);">Yeni müşteri bilgileri — kaydedince otomatik müşteri kartı oluşturulur</div>
+          <div class="form-grid">
+            <div class="form-field full"><label>Ad Soyad / Unvan *</label><input id="npFullName"></div>
+            <div class="form-field"><label>TC / VKN</label><input id="npTcVkn"></div>
+            <div class="form-field"><label>Telefon *</label><input id="npPhone" placeholder="05XX XXX XX XX"></div>
+            <div class="form-field"><label>Şehir</label><input id="npCity"></div>
+            <div class="form-field"><label>Doğum Tarihi</label><input id="npBirthDate" type="date"></div>
+            <div class="form-field"><label>Tip</label>
+              <select id="npType"><option value="bireysel">Bireysel</option><option value="kurumsal">Kurumsal</option></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label>Sigorta Şirketi</label>
+          <select id="pCompany" onchange="togglePolicyCompanyOther()"></select>
+        </div>
+        <div class="form-field" id="pCompanyOtherWrap" style="display:none;">
+          <label>Şirket Adı</label>
+          <input id="pCompanyOther" placeholder="Listede yoksa buraya yaz">
+        </div>
+
+        <div class="form-field"><label>Branş</label>
+          <select id="pBranch">
+            <option>Trafik</option><option>Kasko</option><option>DASK</option>
+            <option>Konut</option><option>Sağlık</option><option>Tamamlayıcı Sağlık</option><option>Diğer</option>
+          </select>
+        </div>
+        <div class="form-field"><label>Poliçe No</label><input id="pPolicyNo"></div>
+        <div class="form-field"><label>Plaka (araç ise)</label><input id="pPlate" placeholder="06 ABC 123"></div>
+        <div class="form-field"><label>Başlangıç</label><input id="pStart" type="date"></div>
+        <div class="form-field"><label>Bitiş *</label><input id="pEnd" type="date"></div>
+        <div class="form-field"><label>Brüt Prim (₺)</label><input id="pPremium" type="number" step="0.01"></div>
+        <div class="form-field"><label>Komisyon Oranı (%)</label><input id="pCommission" type="number" step="0.01"></div>
+        <div class="form-field full"><label>Durum</label>
+          <select id="pStatus"><option value="aktif">Aktif</option><option value="iptal">İptal</option><option value="yenilendi">Yenilendi</option><option value="sure-gecti">Süresi Geçti</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('policyModal')">Vazgeç</button>
+      <button class="btn btn-accent" onclick="savePolicy()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cari Modal -->
+<div class="modal-overlay" id="cariModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Yeni Cari Hareket</h3><button class="modal-close" onclick="closeModal('cariModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field full"><label>Müşteri *</label><select id="carCustomer"></select></div>
+        <div class="form-field"><label>Tip</label>
+          <select id="carType"><option value="borc">Borç</option><option value="alacak">Alacak (Tahsilat)</option></select>
+        </div>
+        <div class="form-field"><label>Tutar (₺) *</label><input id="carAmount" type="number" step="0.01"></div>
+        <div class="form-field"><label>Tarih</label><input id="carDate" type="date"></div>
+        <div class="form-field full"><label>Açıklama</label><input id="carDesc" placeholder="Poliçe primi / tahsilat notu"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('cariModal')">Vazgeç</button>
+      <button class="btn btn-accent" onclick="saveCari()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Taksit Modal -->
+<div class="modal-overlay" id="installmentModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Yeni Taksit</h3><button class="modal-close" onclick="closeModal('installmentModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field full"><label>Müşteri *</label><select id="iCustomer" onchange="fillPolicyOptionsForCustomer()"></select></div>
+        <div class="form-field full"><label>Poliçe</label><select id="iPolicy"></select></div>
+        <div class="form-field"><label>Taksit No</label><input id="iNo" type="number" value="1"></div>
+        <div class="form-field"><label>Vade Tarihi *</label><input id="iDue" type="date"></div>
+        <div class="form-field"><label>Tutar (₺) *</label><input id="iAmount" type="number" step="0.01"></div>
+        <div class="form-field"><label>Durum</label>
+          <select id="iPaid"><option value="false">Ödenmedi</option><option value="true">Ödendi</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('installmentModal')">Vazgeç</button>
+      <button class="btn btn-accent" onclick="saveInstallment()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
